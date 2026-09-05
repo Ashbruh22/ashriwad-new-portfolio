@@ -1,0 +1,408 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@config "../tailwind.config.ts";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ─────────────────────────────────────────────
+   THEME TOKENS (Tailwind v4 @theme block)
+   Fonts injected as CSS variables by next/font in layout.tsx.
+───────────────────────────────────────────── */
+@theme inline {
+  --font-display: var(--font-geist-sans);
+  --font-body:    var(--font-geist-sans);
+  --font-mono:    var(--font-geist-mono);
+  --font-sans:    var(--font-geist-sans);
+  --font-heading: var(--font-geist-sans);
+
+  /* palette — mirrors lib/palette.ts */
+  --color-accent:        var(--accent);
+  --color-accent-2:      var(--accent-2);
+  --color-bg-base:       var(--bg-base);
+  --color-bg-elevated:   var(--bg-elevated);
+  --color-text-primary:  var(--text-primary);
+  --color-text-secondary:var(--text-secondary);
+  --color-surface:       var(--surface);
+  --color-border-subtle: var(--border-subtle);
+}
+
+/* ─────────────────────────────────────────────
+   CSS CUSTOM PROPERTIES
+───────────────────────────────────────────── */
+:root {
+  --bg:             #ffffff;
+  --bg-base:        var(--bg);
+  --bg-elevated:    #fafafa;
+  --text:           #0a0a0a;
+  --text-primary:   var(--text);
+  --text-secondary: #666666;
+  --border-subtle:  #ebebeb;
+  --surface:        var(--bg-elevated);
+  --accent:         #0070f3;
+  /* secondary hue — only ever used "in motion" (Aurora, gradient/shimmer text,
+     dot-field glow). Body copy / borders / cards stay on the mono tokens. */
+  --accent-2:       #22d3ee;
+
+  --radius-card:    12px;
+
+  color-scheme: light;
+}
+
+.dark {
+  --bg:             #0a0a0a;
+  --bg-base:        var(--bg);
+  --bg-elevated:    #111111;
+  --text:           #ededed;
+  --text-primary:   var(--text);
+  --text-secondary: #a1a1a1;
+  --border-subtle:  #262626;
+  --surface:        var(--bg-elevated);
+  --accent:         #3291ff;
+  --accent-2:       #67e8f9;
+  color-scheme: dark;
+}
+
+/* ─────────────────────────────────────────────
+   BASE
+   Wrapped in @layer base so Tailwind's utilities (in the later
+   `utilities` layer) still win over this reset — an unlayered
+   `* { padding: 0 }` would beat every `p-*` / `px-*` utility.
+───────────────────────────────────────────── */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+html {
+  scroll-behavior: auto; /* Lenis owns smooth scroll */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "rlig" 1, "calt" 1;
+  height: 100%;
+  overscroll-behavior-y: contain;
+  /* `clip` (not `hidden`) contains transient reveal transforms without turning
+     the viewport into a scroll container */
+  overflow-x: clip;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: var(--font-geist-sans, system-ui, sans-serif);
+  min-height: 100%;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  letter-spacing: -0.011em;
+}
+
+.site-flow {
+  position: relative;
+  width: 100%;
+}
+
+/* content sits above the fixed 3D canvas layer (z-index: 1) */
+#main,
+footer {
+  position: relative;
+  z-index: 10;
+}
+
+.hero-shell {
+  /* equal top/bottom so the flex-centred content sits on the section's true
+     centre — asymmetric padding here previously pushed it ~24px off-centre */
+  padding: 5rem 1.5rem 5rem;
+}
+@media (min-width: 1024px) {
+  .hero-shell { padding-inline: 3rem; }
+}
+
+/* ─────────────────────────────────────────────
+   ACCESSIBILITY — skip link
+───────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: 1rem;
+  z-index: 9999;
+  padding: 0.5rem 1rem;
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border-radius: 0 0 8px 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 0.15s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────
+   FLAT CARD
+───────────────────────────────────────────── */
+.glass-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  transition: border-color 0.18s ease, background-color 0.18s ease;
+}
+.glass-card:hover {
+  border-color: color-mix(in oklab, var(--border-subtle) 45%, var(--text-secondary));
+  background: color-mix(in oklab, var(--bg-elevated) 96%, var(--text-primary));
+}
+
+/* subtle two-stop clip used only on the hero h1 */
+.gradient-text {
+  background: linear-gradient(175deg, var(--text-primary) 30%, color-mix(in oklab, var(--text-primary) 62%, transparent));
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* ─────────────────────────────────────────────
+   REACT BITS — animated text / motion utilities
+   Custom classes, intentionally unlayered so they win over Tailwind
+   utilities. The one accent-2 hue only ever appears here (in motion).
+───────────────────────────────────────────── */
+
+/* animated accent sheen travelling through mono text (GradientText) */
+.rb-gradient-text {
+  background-image: linear-gradient(
+    100deg,
+    var(--text-primary) 0%,
+    var(--text-primary) 32%,
+    var(--accent) 46%,
+    var(--accent-2) 54%,
+    var(--text-primary) 68%,
+    var(--text-primary) 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 50%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: rb-gradient-pan 8s linear infinite;
+}
+@keyframes rb-gradient-pan {
+  to { background-position: -150% 50%; }
+}
+
+/* Silver text fill — Hero's name + every section eyebrow. Replaces an
+   earlier, busier "chrome" treatment (a 7-stop banded gradient meant to
+   mimic reflective metal) with a plain two-stop sheen — light theme reads as
+   a dark gunmetal silver, dark theme as a bright bright-to-mid silver.
+   Fixed hex, not the --text-primary/--bg-elevated tokens the old chrome
+   version derived from — silver is a specific colour choice, not "whatever
+   the theme's text colour is." */
+.silver-text {
+  background-image: linear-gradient(180deg, #71717a 0%, #3f3f46 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.dark .silver-text {
+  background-image: linear-gradient(180deg, #e4e4e7 0%, #a1a1aa 100%);
+}
+
+/* one-pass shimmer sweep for small labels (ShinyText). `color` is left
+   inherited so `currentColor` below resolves to the real text colour; only the
+   glyph fill is clipped from the moving gradient. */
+.rb-shiny-text {
+  background-image: linear-gradient(
+    110deg,
+    currentColor 0%,
+    currentColor 42%,
+    var(--accent-2) 50%,
+    currentColor 58%,
+    currentColor 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rb-shine 4s ease-in-out infinite;
+}
+@keyframes rb-shine {
+  0%, 100% { background-position: 150% 50%; }
+  50%      { background-position: -50% 50%; }
+}
+
+/* Skills grid — spotlight category cards. The trigger is a real <button>
+   (see components/ui/SkillsGrid.tsx for why), reset to look like plain
+   content; the glow overlay it sits on top of is SpotlightCard's own. */
+.skill-card-trigger {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  padding: 1.25rem;
+}
+
+/* Pills wrapper: a 0fr→1fr grid-template-rows collapse rather than a
+   guessed fixed max-height, so each card's reveal animates to its own
+   exact content height — Languages (5 pills) and AI/ML (12 pills) don't
+   share one arbitrary cap. The inner flex row needs its own overflow:hidden
+   for the 0fr state to actually clip it (Tailwind's `overflow-hidden`). */
+.skill-pills-wrap {
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Each pill fades/slides in independently; per-pill `transition-delay` is
+   set inline from the .map() index in SkillsGrid for the fan-in stagger. */
+.skill-pill {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+/* Only devices with a real pointer that can hover get the collapse/reveal
+   treatment — touch has no reliable hover, so it never gets this rule and
+   falls through to the "always open" default below. */
+@media (hover: hover) and (pointer: fine) {
+  .skill-card-trigger:hover .skill-pills-wrap,
+  .skill-card-trigger:focus-visible .skill-pills-wrap {
+    grid-template-rows: 1fr;
+  }
+  .skill-card-trigger:hover .skill-pill,
+  .skill-card-trigger:focus-visible .skill-pill {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@media not all and (hover: hover) {
+  .skill-pills-wrap { grid-template-rows: 1fr; }
+  .skill-pill { opacity: 1; transform: none; }
+}
+
+/* skills strip — two directions, duplicated content scrolls seamlessly */
+.animate-marquee,
+.animate-marquee-reverse {
+  animation: rb-marquee 32s linear infinite;
+}
+.animate-marquee-reverse { animation-direction: reverse; }
+@keyframes rb-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-33.3333%); }
+}
+.rb-marquee-track:hover .animate-marquee,
+.rb-marquee-track:hover .animate-marquee-reverse {
+  animation-play-state: paused;
+}
+
+/* StarBorder — travelling glints along the top / bottom edge */
+.animate-star-movement-bottom {
+  animation: rb-star-bottom linear infinite alternate;
+}
+.animate-star-movement-top {
+  animation: rb-star-top linear infinite alternate;
+}
+@keyframes rb-star-bottom {
+  0%   { transform: translate(0%, 0%);   opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+@keyframes rb-star-top {
+  0%   { transform: translate(0%, 0%);  opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
+}
+
+/* ProfileCard — the holographic shine sweep behind the avatar. Kept as a
+   class (not the vendored source's inline `animation`) so the reduced-motion
+   guard below can kill it the same way as every other looping animation. */
+.pc-shine {
+  animation: pc-holo-bg 18s linear infinite;
+}
+@keyframes pc-holo-bg {
+  0%   { background-position: 0 var(--background-y), 0 0, center; }
+  100% { background-position: 0 var(--background-y), 90% 90%, center; }
+}
+
+/* Kill every looping motion utility when the visitor opts out via the nav
+   toggle (ReducedMotionProvider stamps this on a display:contents wrapper).
+   Canvas layers are unmounted in JS; these are the CSS-only ones. */
+[data-reduced-motion='true'] .rb-gradient-text,
+[data-reduced-motion='true'] .rb-shiny-text,
+[data-reduced-motion='true'] .animate-marquee,
+[data-reduced-motion='true'] .animate-marquee-reverse,
+[data-reduced-motion='true'] .animate-star-movement-top,
+[data-reduced-motion='true'] .animate-star-movement-bottom,
+[data-reduced-motion='true'] .pc-shine {
+  animation: none !important;
+}
+[data-reduced-motion='true'] .rb-gradient-text,
+[data-reduced-motion='true'] .rb-shiny-text {
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  color: inherit;
+}
+/* Skills cards: force every pill permanently open regardless of pointer
+   type — reduced-motion visitors shouldn't need to hover/focus a gesture
+   to see content, on top of nothing here animating for them. */
+[data-reduced-motion='true'] .skill-pills-wrap {
+  grid-template-rows: 1fr !important;
+  transition: none !important;
+}
+[data-reduced-motion='true'] .skill-pill {
+  opacity: 1 !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+a.link-underline {
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+a.link-underline:hover,
+a.link-underline:focus-visible {
+  border-color: currentColor;
+}
+
+/* ─────────────────────────────────────────────
+   SCROLLBAR
+───────────────────────────────────────────── */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
+
+/* ─────────────────────────────────────────────
+   FOCUS
+───────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ─────────────────────────────────────────────
+   REDUCED MOTION
+───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
