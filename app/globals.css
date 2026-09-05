@@ -420,8 +420,9 @@ a.link-underline:focus-visible {
 ───────────────────────────────────────────── */
 
 :root {
-  /* The hero's own hue, taken from the character's neon rim light. Deliberately
-     separate from --accent (the site's blue) — it only ever appears here. */
+  /* The hero's own hue, shared with the glow behind the character.
+     Deliberately separate from --accent (the site's blue) — it only ever
+     appears here. */
   --hero-accent:      #7c3aed;
   --hero-accent-soft: #a855f7;
 }
@@ -657,14 +658,19 @@ a.link-underline:focus-visible {
   width: 100%;
   height: 100%;
   perspective: 900px;
+  /* Blur radii scale with the character so the glow reads the same on a phone
+     as on a desktop; the fallback is the desktop cap of --character-size. */
+  --aura-scale: var(--character-size, 30rem);
 }
-.gaze__poster,
+.gaze__poster-layer,
 .gaze__stage {
   position: absolute;
   inset: 0;
   transition: opacity 0.4s ease;
 }
 .gaze__poster {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
@@ -682,6 +688,54 @@ a.link-underline:focus-visible {
   /* Short enough that the pose reads as switching with the cursor rather than
      dissolving — long enough that the switch is not a hard cut. */
   transition: opacity 130ms linear;
+}
+
+/* ── the purple glow ──────────────────────────────────────────────────────
+   The source render has no rim light of its own, so the glow is built here:
+   a purple gradient masked by the sprite's own alpha and blurred, which makes
+   it the character's silhouette rather than a circle parked behind him. Two
+   passes — a wide wash and a tight rim — read as one gradient falling off. */
+.gaze__aura {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    155deg,
+    #f0abfc 0%,
+    #d8b4fe 22%,
+    #a855f7 48%,
+    #8b5cf6 74%,
+    #6d28d9 100%
+  );
+  -webkit-mask-image: url('/hero/character-sprite.webp');
+  mask-image: url('/hero/character-sprite.webp');
+  -webkit-mask-size: 300% 300%;
+  mask-size: 300% 300%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 50% 50%;
+  mask-position: 50% 50%;
+  pointer-events: none;
+}
+.gaze__aura--soft {
+  /* Spread comes from the blur, not the scale — a large scale with a modest
+     blur reads as a second, offset character rather than as light. */
+  filter: blur(calc(var(--aura-scale) * 0.11));
+  transform: scale(1.05);
+  opacity: 1;
+}
+.gaze__aura--rim {
+  filter: blur(calc(var(--aura-scale) * 0.018));
+  transform: scale(1.022);
+  opacity: 0.85;
+}
+/* The poster is a single frame, so its glow masks the whole image, not a cell. */
+.gaze__aura--poster {
+  -webkit-mask-image: url('/hero/character-poster.webp');
+  mask-image: url('/hero/character-poster.webp');
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
 }
 
 [data-reduced-motion='true'] .hero-glow {

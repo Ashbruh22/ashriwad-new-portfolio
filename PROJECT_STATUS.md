@@ -2,26 +2,32 @@
 
 _Updated 2026-09-05._
 
-> **2026-09-05 — the hero is now the 3D character sprite.** The centrepiece is
-> a nine-pose sprite sheet of the character (purple hoodie, cap, neon rim
-> light) that turns to follow the cursor, layered between two display words.
+> **2026-09-05 — the hero is the 3D character sprite.** The centrepiece is a
+> nine-pose sprite sheet of the character that turns to follow the cursor,
+> wrapped in a purple gradient glow and layered between two display words.
 >
 > **New**
-> - `assets/character-source.mp4` — the 10s source render (camera locked, the
->   character looks around). Not served; it is the input to the build script.
-> - `scripts/build-character-sprite.py` — cuts nine frames out of that clip,
->   keys the black background to alpha (flood-fill in from the frame border,
->   which the neon rim is bright enough to stop, so the rim survives on both
->   themes) and writes:
->   - `public/hero/character-sprite.webp` — 3x3 sheet, 1860px, ~186 KB, row
+> - `assets/character-source.mp4` — the 10s source render. Not served; it is the
+>   input to the build script. Only the first ~5s are usable: the clip sweeps
+>   yaw (right, through centre, to left) and then pitch (up, then down) on a
+>   locked camera, and after that it pushes in to a close-up that no amount of
+>   registration can match to the rest.
+> - `scripts/build-character-sprite.py` — cuts nine frames out of that clip and
+>   writes:
+>   - `public/hero/character-sprite.webp` — 3x3 sheet, 1860px, ~191 KB, row
 >     major: up-left / up / up-right, left / centre / right, down-left / down /
 >     down-right.
->   - `public/hero/character-poster.webp` — the centre cell alone, ~22 KB.
+>   - `public/hero/character-poster.webp` — the centre cell alone, ~23 KB.
 >   Needs `pillow numpy scipy imageio-ffmpeg`; re-run it after editing the
->   frame table at the top of the script.
->   **The clip never turns him to the viewer's right**, so the right column is
->   the left column mirrored — he is symmetrical enough that the cap brim and
->   hood swapping sides reads as a real turn.
+>   `TIMES` table at the top. Two passes per frame:
+>   **alpha** — the black background is keyed out by flood-filling the
+>   near-black region in from the frame border, so only pixels connected to the
+>   outside are cut and his own dark cap and hair survive; and
+>   **registration** — he leans into each turn, which would make the whole bust
+>   jump sideways on every pose switch, so each frame is shifted to put his
+>   torso centre on the same x. Nothing is mirrored: the backpack sits on one
+>   shoulder and a flipped cell would make it swap sides mid-sweep. The corner
+>   cells come from the moments where one sweep hands over to the next.
 > - `components/hero/CharacterGaze.tsx` — the interactive sprite. Normalises the
 >   pointer to [-1, 1] around the character's head, damps it, and **snaps to the
 >   nearest of the nine poses** (with hysteresis) rather than cross-fading a
@@ -31,6 +37,13 @@ _Updated 2026-09-05._
 >   translate/rotate on the stack supplies the analogue motion. Idles into a
 >   slow look-around after 2.6s without pointer movement. Reduced motion renders
 >   the poster only and never fetches the sheet.
+> - **The glow** (`.gaze__aura` in globals.css) — the source render has no rim
+>   light, so it is built in CSS: a purple gradient masked by the sprite's own
+>   alpha and blurred, which makes the glow the character's silhouette instead
+>   of a circle parked behind him. Two passes, a wide wash and a tight rim. The
+>   mask-position follows the active pose, set by the same JS that switches
+>   cells. Spread comes from the blur, not from scaling the layer — a large
+>   scale with a modest blur reads as a second, offset character.
 > - `components/sections/Hero.tsx` — the layered composition. Everything sits in
 >   one CSS grid cell (`.hero-stack > *`): glow, "AI / ML" behind the character,
 >   the character, "DEVELOPER" in front, then the copy.
@@ -40,6 +53,11 @@ _Updated 2026-09-05._
 >   under reduced motion), `Nav`, `Footer`, `DotBackground`, `social-dock`.
 > - `components/sections/About.tsx` — a short landing pad so the hero's
 >   "About me" CTA and the nav link have somewhere real to scroll to.
+>
+> **Known limits of the source.** The clip never combines a downward tilt with
+> a turn to the viewer's left, so `down-left` is the strongest left turn at a
+> level head rather than a genuine down-and-left. The stage's `rotateX` carries
+> the pitch there.
 >
 > **Still missing.** `PROJECT_REQUIREMENTS.md` asks for Experience, Featured
 > Projects, Project Grid, Skills, Certifications and Contact sections; none of

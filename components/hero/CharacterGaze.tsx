@@ -71,10 +71,18 @@ const CharacterGaze: React.FC<CharacterGazeProps> = ({ className, label }) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const cellRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const auraRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const setCellRef = useCallback(
     (index: number) => (node: HTMLDivElement | null) => {
       cellRefs.current[index] = node;
+    },
+    [],
+  );
+
+  const setAuraRef = useCallback(
+    (index: number) => (node: HTMLDivElement | null) => {
+      auraRefs.current[index] = node;
     },
     [],
   );
@@ -174,6 +182,16 @@ const CharacterGaze: React.FC<CharacterGazeProps> = ({ className, label }) => {
       if (active !== painted) {
         cellRefs.current[painted]?.style.setProperty('opacity', '0');
         cellRefs.current[active]?.style.setProperty('opacity', '1');
+        // The glow is the same sheet used as a mask, so it has to follow the
+        // pose or it would light the wrong silhouette. It swaps outright
+        // rather than crossfading — it is blurred past the point where the
+        // switch is visible under the cells' own 130ms fade.
+        const position = `${held.col * 50}% ${held.row * 50}%`;
+        for (const aura of auraRefs.current) {
+          if (!aura) continue;
+          aura.style.setProperty('-webkit-mask-position', position);
+          aura.style.setProperty('mask-position', position);
+        }
         painted = active;
       }
 
@@ -202,44 +220,55 @@ const CharacterGaze: React.FC<CharacterGazeProps> = ({ className, label }) => {
       role="img"
       aria-label={label}
     >
-      {/* Sits under the sprite stack: it is 22 KB against the sheet's 186 KB,
-          so it paints first, and it is the whole thing under reduced motion
-          or with JS off. */}
-      <img
-        src={POSTER_SRC}
-        alt=""
+      {/* Sits under the sprite stack: it is a tenth of the sheet's weight, so
+          it paints first, and it is the whole thing under reduced motion or
+          with JS off. */}
+      <div
+        className="gaze__poster-layer"
+        style={{ opacity: reduced || !spriteReady ? 1 : 0 }}
         aria-hidden="true"
-        className="gaze__poster"
-        style={{ opacity: spriteReady ? 0 : 1 }}
-        width={620}
-        height={620}
-        fetchPriority="high"
-        draggable={false}
-      />
+      >
+        <div className="gaze__aura gaze__aura--soft gaze__aura--poster" />
+        <div className="gaze__aura gaze__aura--rim gaze__aura--poster" />
+        <img
+          src={POSTER_SRC}
+          alt=""
+          className="gaze__poster"
+          width={620}
+          height={620}
+          fetchPriority="high"
+          draggable={false}
+        />
+      </div>
 
       {!reduced && (
-        <>
-          <div
-            ref={stageRef}
-            className="gaze__stage"
-            style={{ opacity: spriteReady ? 1 : 0 }}
-            aria-hidden="true"
-          >
-            {CELLS.map(({ col, row }, index) => (
-              <div
-                key={`${col}-${row}`}
-                ref={setCellRef(index)}
-                className="gaze__cell"
-                style={{
-                  backgroundPosition: `${col * 50}% ${row * 50}%`,
-                  // Centre cell only until the first frame runs, so hydration
-                  // matches the poster underneath.
-                  opacity: index === 4 ? 1 : 0,
-                }}
-              />
-            ))}
-          </div>
-        </>
+        <div
+          ref={stageRef}
+          className="gaze__stage"
+          style={{ opacity: spriteReady ? 1 : 0 }}
+          aria-hidden="true"
+        >
+          {/* Two masked gradient layers behind the character: a wide wash and
+              a tight rim. Both are the sprite sheet itself used as an alpha
+              mask, so the glow is the character's own outline rather than a
+              circle sitting behind him. */}
+          <div ref={setAuraRef(0)} className="gaze__aura gaze__aura--soft" />
+          <div ref={setAuraRef(1)} className="gaze__aura gaze__aura--rim" />
+
+          {CELLS.map(({ col, row }, index) => (
+            <div
+              key={`${col}-${row}`}
+              ref={setCellRef(index)}
+              className="gaze__cell"
+              style={{
+                backgroundPosition: `${col * 50}% ${row * 50}%`,
+                // Centre cell only until the first frame runs, so hydration
+                // matches the poster underneath.
+                opacity: index === 4 ? 1 : 0,
+              }}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
