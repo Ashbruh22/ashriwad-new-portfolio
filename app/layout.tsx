@@ -137,6 +137,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={cn(geistSans.variable, geistMono.variable, 'font-sans')}
     >
       <head>
+        {/* The hero character's 3x3 sprite sheet is the page's hero image —
+            start it in parallel with the CSS that references it. */}
+        <link
+          rel="preload"
+          as="image"
+          type="image/webp"
+          href="/hero/character-poster.webp"
+          fetchPriority="high"
+        />
+
+        {/* Without JS the hero's entrance animations never run, so the markup
+            framer-motion server-renders (opacity 0, pre-transform) would be all
+            a visitor ever sees. Only the reveal wrappers are reset — the words'
+            own placement transforms live on the elements inside them. */}
+        <noscript>
+          <style>{'.hero-reveal{opacity:1!important;transform:none!important}'}</style>
+        </noscript>
+
         {/* Inject JSON-LD Schema */}
         <script
           type="application/ld+json"

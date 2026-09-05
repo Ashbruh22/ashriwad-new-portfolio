@@ -1,7 +1,62 @@
 # Project status — handoff for a fresh session
 
-_Updated 2026-09-03. The minimal / Vercel-like restyle is **complete**; what's
-left is real-asset deploy blockers (bottom of this doc)._
+_Updated 2026-09-05._
+
+> **2026-09-05 — the hero is now the 3D character sprite.** The centrepiece is
+> a nine-pose sprite sheet of the character (purple hoodie, cap, neon rim
+> light) that turns to follow the cursor, layered between two display words.
+>
+> **New**
+> - `assets/character-source.mp4` — the 10s source render (camera locked, the
+>   character looks around). Not served; it is the input to the build script.
+> - `scripts/build-character-sprite.py` — cuts nine frames out of that clip,
+>   keys the black background to alpha (flood-fill in from the frame border,
+>   which the neon rim is bright enough to stop, so the rim survives on both
+>   themes) and writes:
+>   - `public/hero/character-sprite.webp` — 3x3 sheet, 1860px, ~186 KB, row
+>     major: up-left / up / up-right, left / centre / right, down-left / down /
+>     down-right.
+>   - `public/hero/character-poster.webp` — the centre cell alone, ~22 KB.
+>   Needs `pillow numpy scipy imageio-ffmpeg`; re-run it after editing the
+>   frame table at the top of the script.
+>   **The clip never turns him to the viewer's right**, so the right column is
+>   the left column mirrored — he is symmetrical enough that the cap brim and
+>   hood swapping sides reads as a real turn.
+> - `components/hero/CharacterGaze.tsx` — the interactive sprite. Normalises the
+>   pointer to [-1, 1] around the character's head, damps it, and **snaps to the
+>   nearest of the nine poses** (with hysteresis) rather than cross-fading a
+>   bilinear blend: the poses are nine separate renders, not frames of one turn,
+>   so blending neighbours leaves two faces visible at half strength. A 130ms
+>   CSS opacity transition covers the switch and a continuous parallax
+>   translate/rotate on the stack supplies the analogue motion. Idles into a
+>   slow look-around after 2.6s without pointer movement. Reduced motion renders
+>   the poster only and never fetches the sheet.
+> - `components/sections/Hero.tsx` — the layered composition. Everything sits in
+>   one CSS grid cell (`.hero-stack > *`): glow, "AI / ML" behind the character,
+>   the character, "DEVELOPER" in front, then the copy.
+> - Shell components the layout already imported but that had never been
+>   committed: `ReducedMotionProvider` (a `useSyncExternalStore` over the OS
+>   media query + a localStorage override), `SmoothScrollProvider` (Lenis, off
+>   under reduced motion), `Nav`, `Footer`, `DotBackground`, `social-dock`.
+> - `components/sections/About.tsx` — a short landing pad so the hero's
+>   "About me" CTA and the nav link have somewhere real to scroll to.
+>
+> **Still missing.** `PROJECT_REQUIREMENTS.md` asks for Experience, Featured
+> Projects, Project Grid, Skills, Certifications and Contact sections; none of
+> them are built, and `app/page.tsx` renders only Hero + About. The nav is
+> trimmed to the links that resolve. `/resume-placeholder.pdf`,
+> `/og-image.png`, `/apple-touch-icon.png` and `/poster.png` are all still
+> referenced by `lib/constants.ts` / `app/layout.tsx` but absent from `public/`
+> — the hero's résumé CTA was dropped rather than ship a dead download.
+> `package.json` has a `test:e2e` script but there is no `playwright.config.ts`
+> and no `e2e/` directory.
+
+---
+
+## Earlier — 2026-09-03
+
+_The minimal / Vercel-like restyle is **complete**; what's left is real-asset
+deploy blockers (bottom of this doc)._
 
 > **2026-09-04 — the whole custom 3D layer was scrapped.** Both the 3D developer
 > character AND the hand-built "chrome orb" (MarchingCubes + spring sim) are gone.

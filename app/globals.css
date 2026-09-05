@@ -79,6 +79,11 @@
   }
 }
 
+/* Anchored sections clear the fixed nav when jumped to. */
+section[id] {
+  scroll-margin-top: 4.5rem;
+}
+
 html {
   scroll-behavior: auto; /* Lenis owns smooth scroll */
   -webkit-font-smoothing: antialiased;
@@ -405,4 +410,280 @@ a.link-underline:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ─────────────────────────────────────────────
+   HERO — layered character stage
+   The nine-pose character sprite, the two display words that sandwich it,
+   and the intro copy all occupy one grid cell (.hero-stack > *) so they
+   layer in z-order without absolute-position guesswork.
+───────────────────────────────────────────── */
+
+:root {
+  /* The hero's own hue, taken from the character's neon rim light. Deliberately
+     separate from --accent (the site's blue) — it only ever appears here. */
+  --hero-accent:      #7c3aed;
+  --hero-accent-soft: #a855f7;
+}
+.dark {
+  --hero-accent:      #a78bfa;
+  --hero-accent-soft: #c084fc;
+}
+
+.hero-stack {
+  /* One knob for the composition: the character's size, which the two display
+     words offset themselves against so the three stay locked together at every
+     viewport width. */
+  --character-size: clamp(17rem, 34vw, 34rem);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: min(46rem, calc(100svh - 8.5rem));
+}
+.hero-stack > * {
+  grid-area: 1 / 1;
+}
+
+/* Centred by default, and never eats clicks; individual layers re-align
+   themselves and anything interactive re-enables pointer events on itself. */
+.hero-layer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.hero-glow {
+  width: min(78vw, 44rem);
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 50% 45%,
+    color-mix(in oklab, var(--hero-accent-soft) 34%, transparent) 0%,
+    color-mix(in oklab, var(--hero-accent) 16%, transparent) 42%,
+    transparent 68%
+  );
+  filter: blur(28px);
+  animation: hero-breathe 9s ease-in-out infinite;
+}
+@keyframes hero-breathe {
+  0%, 100% { transform: scale(1);    opacity: 0.85; }
+  50%      { transform: scale(1.06); opacity: 1; }
+}
+
+.hero-character {
+  width: var(--character-size);
+  aspect-ratio: 1;
+}
+
+/* ── the two display words ───────────────────────────────────────────────
+   Both sit on the stack's bottom edge and are nudged off-centre in opposite
+   directions, so the character's head and chest interrupt the pair the way
+   they would a real sign standing behind and in front of him. The back word
+   crosses at chin height, where the silhouette is at its narrowest and the
+   most of it stays readable either side of him. */
+.hero-word {
+  font-weight: 700;
+  line-height: 0.82;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+/* Offsets are in character-heights, not percentages: percentage padding on a
+   flex box resolves against its *width*, which detaches the words from the
+   character the moment the viewport is not square. */
+.hero-word--back  { transform: translateY(calc(var(--character-size) * -0.36)); }
+.hero-word--front { transform: translateY(calc(var(--character-size) *  0.50)); }
+
+.hero-word--back {
+  /* Deliberately the larger of the two: it is only five glyphs against
+     DEVELOPER's nine, and it has to stay readable either side of a character
+     who is a good deal wider than his own head. The spaced-out slash buys the
+     extra width that puts "AI" clear on one side and "ML" on the other. */
+  font-size: clamp(2.5rem, 15vw, 12rem);
+  letter-spacing: 0.01em;
+  word-spacing: 0.22em;
+  color: var(--hero-accent);
+  text-shadow: 0 0 2.5rem color-mix(in oklab, var(--hero-accent-soft) 45%, transparent);
+}
+.hero-word--front {
+  font-size: clamp(2.25rem, 9vw, 6.5rem);
+  color: var(--text-primary);
+  text-shadow: 0 0.5rem 2rem color-mix(in oklab, var(--bg-base) 70%, transparent);
+}
+
+@media (min-width: 768px) {
+  .hero-word--back {
+    /* nudged right, clear of the name block in the opposite corner */
+    transform: translate(12%, calc(var(--character-size) * -0.36));
+  }
+  .hero-word--front {
+    transform: translate(18%, calc(var(--character-size) * 0.5));
+  }
+}
+
+/* On a phone the copy takes the top of the stack rather than overlaying the
+   middle of it, so the character and its two words drop clear of it — and the
+   character grows, since it no longer has to share the width. */
+@media (max-width: 767px) {
+  .hero-stack { --character-size: min(82vw, 43svh); }
+  .hero-layer--back,
+  .hero-layer--character,
+  .hero-layer--front {
+    transform: translateY(17%);
+  }
+}
+
+/* ── the intro copy ─────────────────────────────────────────────────────── */
+.hero-layer--copy {
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding-top: 2%;
+}
+@media (min-width: 768px) {
+  .hero-layer--copy { align-items: center; padding-top: 0; }
+}
+
+.hero-copy {
+  max-width: min(26rem, 82vw);
+  pointer-events: auto;
+}
+@media (min-width: 768px) {
+  .hero-copy { transform: translateY(-14%); }
+}
+
+/* The h1 is a wrapper: the eyebrow and the name inside it own the type, so the
+   browser's own h1 sizing is neutralised here rather than fought in each. */
+.hero-heading {
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.hero-eyebrow {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--hero-accent);
+}
+
+.hero-name {
+  display: block;
+  font-size: clamp(2.25rem, 5.4vw, 4.25rem);
+  font-weight: 600;
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+.hero-tagline {
+  margin-top: 1.1rem;
+  max-width: 30ch;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.hero-hint {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 1.5rem;
+  margin-inline: auto;
+  display: none;
+  width: max-content;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  .hero-hint { display: flex; }
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+}
+
+.hero-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;          /* 44px touch target */
+  padding: 0 1.1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.hero-cta--solid {
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border-color: var(--text-primary);
+}
+.hero-cta--solid:hover {
+  background: color-mix(in oklab, var(--text-primary) 86%, var(--hero-accent));
+  border-color: transparent;
+}
+.hero-cta--ghost {
+  color: var(--text-primary);
+  background: color-mix(in oklab, var(--bg-elevated) 70%, transparent);
+  backdrop-filter: blur(6px);
+}
+.hero-cta--ghost:hover {
+  border-color: var(--hero-accent);
+  color: var(--hero-accent);
+}
+
+/* ─────────────────────────────────────────────
+   CHARACTER SPRITE — 3x3 gaze grid
+   One sheet, `background-size: 300%` and a 0/50/100% background-position per
+   cell. components/hero/CharacterGaze.tsx raises exactly one cell at a time,
+   snapped to the pose nearest the cursor; the transition below is the fade
+   between them.
+───────────────────────────────────────────── */
+.gaze {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 900px;
+}
+.gaze__poster,
+.gaze__stage {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.4s ease;
+}
+.gaze__poster {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.gaze__stage {
+  will-change: transform;
+}
+.gaze__cell {
+  position: absolute;
+  inset: 0;
+  background-image: url('/hero/character-sprite.webp');
+  background-size: 300% 300%;
+  background-repeat: no-repeat;
+  will-change: opacity;
+  /* Short enough that the pose reads as switching with the cursor rather than
+     dissolving — long enough that the switch is not a hard cut. */
+  transition: opacity 130ms linear;
+}
+
+[data-reduced-motion='true'] .hero-glow {
+  animation: none;
 }
