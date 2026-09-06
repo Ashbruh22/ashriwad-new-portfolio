@@ -37,9 +37,9 @@ const eslintConfig = defineConfig([
   },
   {
     // The hero character is a CSS sprite sheet driven by background-position,
-    // which next/image cannot serve; the two <img> tags alongside it are the
-    // already-optimised static WebPs the stack loads and fades between.
-    files: ["components/hero/**/*.{ts,tsx}"],
+    // which next/image cannot serve, and the Experience stage's poster is the
+    // <video>'s own fallback frame. Both are already-optimised static WebPs.
+    files: ["components/hero/**/*.{ts,tsx}", "components/experience/**/*.{ts,tsx}"],
     rules: {
       "@next/next/no-img-element": "off",
     },

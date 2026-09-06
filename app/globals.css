@@ -741,3 +741,102 @@ a.link-underline:focus-visible {
 [data-reduced-motion='true'] .hero-glow {
   animation: none;
 }
+
+/* ─────────────────────────────────────────────
+   EXPERIENCE — the working character
+   The clip is graded down onto black in scripts/build-working-clip.py, so the
+   stage only has to supply a matching dark ground for its edges to melt into,
+   in the light theme as much as the dark one.
+───────────────────────────────────────────── */
+.xp-stage-column {
+  position: sticky;
+  top: 6rem;
+}
+@media (max-width: 767px) {
+  .xp-stage-column { position: static; }
+}
+
+.xp-stage {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  background: #08080a;
+  /* Taller than the clip's 16:9 and cropped with object-fit, which brings the
+     character up to something like the size he is in the hero — a wide frame
+     leaves him small enough that the two sections stop reading as one figure. */
+  aspect-ratio: 4 / 3;
+}
+
+/* Its counterpart in the hero is masked by the sprite's own alpha; this clip is
+   opaque, so the glow sits behind the panel and bleeds out from under it. */
+.xp-stage__glow {
+  position: absolute;
+  inset: -18%;
+  border-radius: 9999px;
+  background: radial-gradient(
+    circle at 50% 55%,
+    color-mix(in oklab, var(--hero-accent-soft) 26%, transparent) 0%,
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
+.xp-stage__media {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── the timeline ─────────────────────────────────────────────────────────── */
+.xp-timeline {
+  position: relative;
+  list-style: none;
+  padding-left: 1.75rem;
+  border-left: 1px solid var(--border-subtle);
+}
+
+.xp-entry {
+  position: relative;
+  padding-bottom: 2.5rem;
+}
+.xp-entry:last-child {
+  padding-bottom: 0;
+}
+.xp-entry::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  left: calc(-1.75rem - 4px);
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--hero-accent);
+}
+
+.xp-entry__period {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.xp-entry__role {
+  margin-top: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.xp-entry__company {
+  margin-top: 0.15rem;
+  font-size: 0.9375rem;
+  color: var(--text-secondary);
+}
+.xp-entry__summary {
+  margin-top: 0.75rem;
+  max-width: 52ch;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}

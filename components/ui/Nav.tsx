@@ -6,7 +6,10 @@ import { useReducedMotionPreference } from '@/components/ui/ReducedMotionProvide
 import { CONTACT, SITE_NAME } from '@/lib/constants';
 
 /** Sections that actually exist on the page — nothing here scrolls to a stub. */
-const LINKS = [{ href: '#about', label: 'About' }] as const;
+const LINKS = [
+  { href: '#about', label: 'About' },
+  { href: '#experience', label: 'Experience' },
+] as const;
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(false);

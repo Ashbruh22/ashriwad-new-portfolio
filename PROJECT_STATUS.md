@@ -1,73 +1,63 @@
 # Project status — handoff for a fresh session
 
-_Updated 2026-09-05._
+_Updated 2026-09-06._
 
-> **2026-09-05 — the hero is the 3D character sprite.** The centrepiece is a
-> nine-pose sprite sheet of the character that turns to follow the cursor,
-> wrapped in a purple gradient glow and layered between two display words.
+> **2026-09-06 — new hero source, plus an Experience section the scroll drives.**
 >
-> **New**
-> - `assets/character-source.mp4` — the 10s source render. Not served; it is the
->   input to the build script. Only the first ~5s are usable: the clip sweeps
->   yaw (right, through centre, to left) and then pitch (up, then down) on a
->   locked camera, and after that it pushes in to a close-up that no amount of
->   registration can match to the rest.
-> - `scripts/build-character-sprite.py` — cuts nine frames out of that clip and
->   writes:
->   - `public/hero/character-sprite.webp` — 3x3 sheet, 1860px, ~191 KB, row
->     major: up-left / up / up-right, left / centre / right, down-left / down /
->     down-right.
->   - `public/hero/character-poster.webp` — the centre cell alone, ~23 KB.
->   Needs `pillow numpy scipy imageio-ffmpeg`; re-run it after editing the
->   `TIMES` table at the top. Two passes per frame:
->   **alpha** — the black background is keyed out by flood-filling the
->   near-black region in from the frame border, so only pixels connected to the
->   outside are cut and his own dark cap and hair survive; and
->   **registration** — he leans into each turn, which would make the whole bust
->   jump sideways on every pose switch, so each frame is shifted to put his
->   torso centre on the same x. Nothing is mirrored: the backpack sits on one
->   shoulder and a flipped cell would make it swap sides mid-sweep. The corner
->   cells come from the moments where one sweep hands over to the next.
-> - `components/hero/CharacterGaze.tsx` — the interactive sprite. Normalises the
->   pointer to [-1, 1] around the character's head, damps it, and **snaps to the
->   nearest of the nine poses** (with hysteresis) rather than cross-fading a
->   bilinear blend: the poses are nine separate renders, not frames of one turn,
->   so blending neighbours leaves two faces visible at half strength. A 130ms
->   CSS opacity transition covers the switch and a continuous parallax
->   translate/rotate on the stack supplies the analogue motion. Idles into a
->   slow look-around after 2.6s without pointer movement. Reduced motion renders
->   the poster only and never fetches the sheet.
-> - **The glow** (`.gaze__aura` in globals.css) — the source render has no rim
->   light, so it is built in CSS: a purple gradient masked by the sprite's own
->   alpha and blurred, which makes the glow the character's silhouette instead
->   of a circle parked behind him. Two passes, a wide wash and a tight rim. The
->   mask-position follows the active pose, set by the same JS that switches
->   cells. Spread comes from the blur, not from scaling the layer — a large
->   scale with a modest blur reads as a second, offset character.
-> - `components/sections/Hero.tsx` — the layered composition. Everything sits in
->   one CSS grid cell (`.hero-stack > *`): glow, "AI / ML" behind the character,
->   the character, "DEVELOPER" in front, then the copy.
-> - Shell components the layout already imported but that had never been
->   committed: `ReducedMotionProvider` (a `useSyncExternalStore` over the OS
->   media query + a localStorage override), `SmoothScrollProvider` (Lenis, off
->   under reduced motion), `Nav`, `Footer`, `DotBackground`, `social-dock`.
-> - `components/sections/About.tsx` — a short landing pad so the hero's
->   "About me" CTA and the nav link have somewhere real to scroll to.
+> **Hero.** `assets/character-source.mp4` is now a 20s clip that combines yaw
+> with pitch, so all nine cells of the sprite sheet — the four diagonals
+> included — are real frames rather than the nearest available approximation.
+> Only **0–12.2s is usable**: the background is pure black up to there, and from
+> ~12.5s an office fades in that the alpha key cannot remove. `TIMES` in
+> `scripts/build-character-sprite.py` was picked by profiling that window at
+> 0.25s (head-silhouette width for the size of the turn, skin-centroid y for the
+> tilt). Nothing else about the hero changed.
 >
-> **Known limits of the source.** The clip never combines a downward tilt with
-> a turn to the viewer's left, so `down-left` is the strongest left turn at a
-> level head rather than a genuine down-and-left. The stage's `rotateX` carries
-> the pitch there.
+> **Which way is left.** Twice now the outer columns have gone in inverted,
+> because a head-crop contact sheet genuinely does not tell you which way the
+> hood is sitting. Settle it by driving the cursor to each edge in a browser and
+> screenshotting, not by eye on the sheet. To fix, swap the outer columns of
+> `TIMES`.
 >
-> **Still missing.** `PROJECT_REQUIREMENTS.md` asks for Experience, Featured
-> Projects, Project Grid, Skills, Certifications and Contact sections; none of
-> them are built, and `app/page.tsx` renders only Hero + About. The nav is
-> trimmed to the links that resolve. `/resume-placeholder.pdf`,
-> `/og-image.png`, `/apple-touch-icon.png` and `/poster.png` are all still
-> referenced by `lib/constants.ts` / `app/layout.tsx` but absent from `public/`
-> — the hero's résumé CTA was dropped rather than ship a dead download.
-> `package.json` has a `test:e2e` script but there is no `playwright.config.ts`
-> and no `e2e/` directory.
+> **Experience** (`components/sections/Experience.tsx`) — a two-column section:
+> the roles as a timeline, and the character sticky alongside them.
+> - `assets/character-working.mp4` opens on him standing on black, in the hero's
+>   framing, and dissolves into a desk over its first ~2.5s. **The transition is
+>   in the footage** — the component only hands it to the scroll.
+> - `scripts/build-working-clip.py` grades it down onto black. There is no
+>   cutout to be had — the background is a rendered room, not a keyable colour,
+>   and matting it needs a model this build cannot run — so it works by lighting
+>   instead: crush everything below 42, multiply by an ellipse over the
+>   character and laptop, and the walls, shelf and plant go to true black.
+>   Outputs `working.webm` (630 KB) and `working.mp4` (611 KB) — both ship,
+>   because Safari needs the H.264 and Chromium builds without proprietary
+>   codecs (Playwright's included) need the VP9 — plus a 16 KB poster.
+> - `components/experience/WorkingCharacter.tsx` writes `currentTime` from the
+>   section's scroll position and never plays, until the scrub reaches the end
+>   and hands over to a tail loop from `TAIL_START` so he keeps typing. Coarse
+>   pointers skip the scrub and just play the clip; reduced motion gets the
+>   poster and **never fetches the video** (the element renders `preload="none"`
+>   and is armed a frame later, after the preference has resolved).
+>
+> **Three things that bit, worth not re-deriving:**
+> 1. The scrub range is clamped to `scrollHeight - innerHeight`. While Experience
+>    is the last section there is not a full screen of travel below it, so an
+>    unclamped mapping never reaches the end of the clip.
+> 2. `timeupdate` fires a few times a second, which is too coarse to catch the
+>    wrap reliably — the clip reaches `ended` and pauses itself. The `ended`
+>    listener is the guarantee; `timeupdate` is only the smooth path.
+> 3. The loop entry/exit thresholds are hysteretic (0.995 / 0.97). At the bottom
+>    of the page progress lands on 1 only to sub-pixel precision and Lenis leaves
+>    it a hair under, which flicks a single threshold between playing and paused.
+>
+> **Still missing.** `PROJECT_REQUIREMENTS.md` also asks for Featured Projects,
+> Project Grid, Skills, Certifications and Contact; none are built, and
+> `app/page.tsx` renders Hero → About → Experience. The two Experience entries
+> carry title/company/dates only — `summary` is empty in `lib/constants.ts` and
+> the timeline renders without it rather than showing invented copy.
+> `/resume-placeholder.pdf`, `/og-image.png`, `/apple-touch-icon.png` and
+> `/poster.png` are still referenced but absent from `public/`. `package.json`
+> has a `test:e2e` script with no `playwright.config.ts` and no `e2e/`.
 
 ---
 

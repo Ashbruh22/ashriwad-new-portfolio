@@ -76,6 +76,28 @@ export const SEO = {
   siteUrl:     SITE_URL,
 } as const;
 
+// ─── Experience ───────────────────────────────────────────────────────────
+
+// Most recent first. Roles/companies/dates per PROJECT_REQUIREMENTS.md §4.4;
+// `summary` is deliberately empty until the real achievement lines are
+// supplied — the timeline renders without it rather than carrying invented copy.
+export const EXPERIENCE = [
+  {
+    company: 'RideAbit',
+    role: 'Backend Developer Intern',
+    period: 'Apr – May 2026',
+    location: 'Remote',
+    summary: '',
+  },
+  {
+    company: 'Happiest Minds Technologies',
+    role: 'AI/ML & Product Engineering Intern',
+    period: 'Jun – Jul 2025',
+    location: 'Bangalore, India',
+    summary: '',
+  },
+] as const;
+
 // ─── Education ────────────────────────────────────────────────────────────
 
 export const EDUCATION = {

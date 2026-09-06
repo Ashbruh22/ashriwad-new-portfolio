@@ -4,9 +4,10 @@
     pip install pillow numpy scipy imageio-ffmpeg
     python3 scripts/build-character-sprite.py
 
-Input  : assets/character-source.mp4 — a 10s render of the character looking
-         around. Only the first ~5s are usable: after that the camera pushes in
-         to a close-up, which no amount of registration can match to the rest.
+Input  : assets/character-source.mp4 — a 20s render of the character looking
+         around. Only 0–12.2s is usable: the background is pure black up to
+         there, and from ~12.5s an office fades in behind him, which the alpha
+         key below has no way to remove.
 Output : public/hero/character-sprite.webp  — 3x3 sheet, row-major:
              up-left      up        up-right
              left         centre    right
@@ -14,12 +15,11 @@ Output : public/hero/character-sprite.webp  — 3x3 sheet, row-major:
          public/hero/character-poster.webp  — the centre cell alone, used for
          the reduced-motion / no-JS fallback.
 
-The clip sweeps yaw (right, through centre, to left) and then pitch (up, then
-down), so every one of the nine cells is a real frame — the corners are taken
-from the moments where one sweep is handing over to the next and both are
-partly present. Nothing is mirrored, which matters here: the backpack sits on
-one shoulder, and a flipped cell would make it jump sides as the cursor crosses
-the middle.
+This clip combines yaw with pitch — he turns *and* tilts — so all nine cells,
+the four diagonals included, are real frames of the character rather than the
+nearest available approximation. Nothing is mirrored, which matters here: the
+backpack sits on one shoulder, and a flipped cell would make it jump sides as
+the cursor crosses the middle.
 
 Two passes over each frame:
 
@@ -46,11 +46,16 @@ SRC = ROOT / 'assets' / 'character-source.mp4'
 OUT = ROOT / 'public' / 'hero'
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
-# Seconds into the clip for each of the nine gaze directions, row-major.
+# Seconds into the clip for each of the nine gaze directions, row-major. Picked
+# by profiling 0–12.2s at 0.25s: head-silhouette width gives the size of the
+# turn, the skin centroid's y gives the tilt. Which of the two turn directions
+# is the viewer's left is NOT reliably readable off a contact sheet — the hood
+# makes it ambiguous — so it is settled by driving the cursor to each edge in a
+# browser. Invert by swapping the outer columns.
 TIMES = [
-    1.90, 3.55, 2.20,
-    1.70, 0.15, 2.90,
-    1.35, 4.35, 2.60,
+    5.00, 3.00, 1.75,
+    6.00, 9.50, 1.10,
+    5.90, 3.90, 8.10,
 ]
 CENTRE = 4
 
