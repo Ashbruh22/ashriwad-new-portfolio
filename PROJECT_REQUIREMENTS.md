@@ -21,7 +21,7 @@
 |---|---|---|
 | Framework | Next.js 14+ (App Router), TypeScript | Static export or ISR is enough for a portfolio; TS matches Ashriwad's stack |
 | Styling | Tailwind CSS + CSS variables for theming | Fast iteration, easy light/dark tokens |
-| 3D | **Three.js via `@react-three/fiber` + `@react-three/drei`** | React-idiomatic Three.js — declarative scene graph fits a Next.js/React codebase far better than imperative Three.js |
+| 3D | **Three.js via `@react-three/fiber` + `@react-three/drei`** (`useGLTF`, `useAnimations` for the rigged character) | React-idiomatic Three.js — declarative scene graph fits a Next.js/React codebase far better than imperative Three.js |
 | Scroll choreography | **GSAP core (not `gsap-trial`) + ScrollTrigger** | Drives the persistent 3D centerpiece's rotation/position/camera across the whole page scroll. Use only GSAP's free/core distribution — trial-tier plugins are explicitly not licensed for production hosting |
 | Component-level animation | React Bits (2D UI primitives) + Framer Motion (local variants/orchestration) | Everything that *isn't* the 3D layer — cards, marquees, text reveals, hover states |
 | Smooth scroll | Lenis (`@studio-freight/lenis`), synced to GSAP's ScrollTrigger via `lenis.on('scroll', ScrollTrigger.update)` | Needed so the GSAP-driven 3D scroll-linking feels buttery, not stepped |
@@ -30,7 +30,7 @@
 | Theme toggle | `next-themes` | Handles dark/light persistence + system preference |
 | Deployment | Vercel | Zero-config with Next.js |
 
-> **Explicitly do NOT install:** physics libraries (`@react-three/cannon`, `@react-three/rapier`) or a postprocessing stack (bloom/DOF/SSAO passes) unless a specific effect genuinely requires it. The audit flagged moncy.dev's dependency list as heavier than it needs to be for what's rendered — our abstract centerpiece (geometry + shader material + optional instanced particles) doesn't need a physics engine, and postprocessing is a common mobile-GPU cost sink for a portfolio's cost/benefit.
+> **Explicitly do NOT install:** physics libraries (`@react-three/cannon`, `@react-three/rapier`) or a postprocessing stack (bloom/DOF/SSAO passes) unless a specific effect genuinely requires it — the rigged character needs an animation system (`AnimationMixer`/`useAnimations`), not a physics engine. Keep the dependency list lean; postprocessing remains a common mobile-GPU cost sink for a portfolio's cost/benefit.
 
 > **Scope note:** this is a materially bigger build than a standard component-driven portfolio. Budget real time for the 3D centerpiece and its performance/fallback/cleanup work — it's the highest-risk, highest-payoff piece of the whole project.
 
@@ -68,41 +68,99 @@
 
 ### 4a. The 3D Centerpiece — concept and architecture
 
-Moncy's site uses a fully custom-modeled/rigged 3D character — a specialized 3D-art skill and roughly a month of work, not a reasonable ask on a job-search timeline. Instead, build an **abstract 3D object that reads as "AI/ML + engineering"** rather than a character:
+**Decision:** the centerpiece is a **posed, rigged 3D character**, rendered live in the existing `Canvas`/`Centerpiece` architecture, in a **low-poly geometric/faceted style** (flat-shaded, minimalist, techy — confirmed as the "modern" direction over Ready Player Me-style semi-realism or a chibi/cartoon character). The character must be an **original or properly licensed asset that Ashriwad has rights to use** — never a copy or derivative of moncy.dev's actual avatar. **Sourcing path:** since Mixamo's own stock characters (X Bot/Y Bot and its default character library) are mid-poly and realistically-proportioned, not faceted, the practical route is: source a low-poly humanoid mesh with a permissive/commercial license from a marketplace (Sketchfab — filter for low-poly, CC-BY or paid commercial license; itch.io asset packs) in a T-pose, then run it through **Mixamo's "Upload Character" auto-rigger** to get a standard rig, then apply Mixamo's animation library to it via retargeting. This keeps the "don't hand-model/rig from scratch" rule intact — Mixamo does the rigging — while getting the exact faceted look. **Do not hand-model a character from scratch.** A detailed character-design brief exists (uploaded separately) describing a fully custom Blender production pipeline — its *design direction and behavior/architecture specification* are adopted below, but its *production pipeline* (modeling/rigging from scratch) is explicitly not the path we're taking; treat that brief as reference for style/behavior, not as production instructions to follow literally.
 
-- **Concept:** a central geometric form — e.g. an icosahedron/dodecahedron core, or a small cluster of connected nodes resembling a neural-net graph — built from primitives + a custom shader material (fresnel/glow edge, matching the gradient palette), optionally surrounded by a sparse instanced-particle field. No physics engine, no imported 3D models required for v1.
-- **Behavior:**
-  - Idle: slow continuous rotation, subtle "breathing" scale, a few instanced points drifting near it.
-  - Mouse-reactive: gentle parallax tilt following cursor position (desktop only).
-  - Scroll-reactive: GSAP ScrollTrigger scrubs its rotation/position/camera distance as the user scrolls, so it feels alive across the whole page. It persists in a fixed canvas behind/beside the content, subtly repositioning per section (bigger/centered in Hero, small and off to one side by Contact).
-- **Fallback:** on WebGL-unsupported browsers, low-end/low-memory devices, narrow screens, slow networks, or `prefers-reduced-motion`/the manual reduce-motion toggle, render a static compressed poster image of the same object instead of the live canvas. Detect capability up front.
-- **Component boundary** (canvas-plus-DOM pattern — the audit's core architectural recommendation): the 3D centerpiece is a **required, core part of the site's identity** — it is not being built as an optional flourish, and it should ship and run by default for the large majority of visitors. The canvas-plus-DOM split still matters architecturally for a different reason: all semantic content (headings, copy, links, project details) lives in ordinary DOM/HTML rather than being drawn onto the canvas, so navigation, identity, and content stay readable, crawlable, and accessible *regardless* of whether the 3D layer is rendering — that's a resilience property, not a statement that the 3D layer itself is optional. The poster-image fallback in the bullet above exists strictly for genuinely incompatible cases (no WebGL, `prefers-reduced-motion`, very low-end hardware) — it is a compatibility fallback, not a design option to skip the 3D piece by default. Concretely:
+**Feasibility note (facial expression), given the low-poly direction:** low-poly/faceted characters typically have minimal or no separate facial geometry (often just a flat-shaded or simply-textured face, no blend-shape rig) — treat true smile/blink facial expression as **out of scope for v1** by default for this style, and get personality/expressiveness entirely from body pose, head/neck orientation, and animation timing instead. Revisit only if a specific sourced asset happens to ship blend shapes.
+
+**Asset budget** (apply when picking the character): the low-poly direction makes this easy to hit — expect well under 20k triangles for a genuinely faceted character (the 20k–50k ideal / 75k ceiling from the general budget is a generous upper bound, not a target to reach for). Favor flat-shaded materials or simple vertex colors over textures — low-poly style typically doesn't need texture maps at all, which is also a performance win.
+
+- **Format & pipeline:** glTF (`.glb`) preferred over FBX for web. Load via `@react-three/drei`'s `useGLTF`/`useAnimations`. Export the Mixamo-rigged result as FBX and convert to `.glb` in the pipeline rather than shipping FBX to the browser.
+- **Material/styling:** the faceted geometry itself does a lot of the stylistic work — recolor flat-shaded materials/vertex colors to sit inside the violet/cyan/pink gradient palette, and lean on the rim-light (below) rather than complex material work: flat normals per facet catch a rim light distinctly and will make the low-poly style read well against the dark background with comparatively little material effort.
+
+#### Animation clips & naming convention
+
+Name/rename clips consistently regardless of which source library they came from, so the state-machine code (below) can reference them by a stable name:
+
+- `Idle` — subtle looping idle: slight breathing, small body movement, natural head movement, seamless loop.
+- `Wave` — greeting, one hand raised.
+- `LookAround` — character looks around naturally.
+- `Point` — points toward a UI element/project.
+- `Walk` — simple forward walk.
+- `Turn` — turns roughly 90–180°.
+- Optional, only if the source library has them and it's low extra effort: `Thinking`, `Typing`, `ThumbsUp`, `Celebrate`.
+
+Map whichever Mixamo/marketplace clips are closest to these names onto this naming convention in code — the exact source clip names don't matter, the consistent internal names do.
+
+#### Scroll-driven state machine (not per-scroll-event triggers)
+
+Do **not** restart or re-trigger animation clips on every scroll event — that reads as janky, not alive. Instead:
 
 ```
-<AppShell>
-  <AccessibilityControls />      {/* skip link, reduce-motion toggle */}
-  <HeaderNav />
-  <Hero>
-    <Suspense fallback={<HeroPoster />}>
-      <CenterpieceScene quality={quality} />
-    </Suspense>
-  </Hero>
-  <AboutSection />
-  <ExperienceTimeline />
-  <FeaturedProjects />
-  <ProjectGrid />
-  <SkillsSection />
-  <CertificationsSection />
-  <ContactSection />
-  <Footer />
-</AppShell>
+Page Scroll
+    ↓
+Scroll Progress (0 → 1)
+    ↓
+Animation Controller (a dedicated hook, e.g. useCharacterAnimation)
+    ↓
+Character State
+    ├── Idle
+    ├── LookAround
+    ├── Turn
+    ├── Walk
+    ├── Point
+    └── Wave
 ```
 
-  All semantic content (headings, copy, links, project details) lives in ordinary DOM/HTML so the page stays readable, crawlable, and navigable even in the rare case the canvas can't mount — but the 3D canvas is expected to mount and run for the default/majority case, not treated as a nice-to-have.
+The controller maps scroll-progress ranges to a small set of discrete states, and only crossfades to a new clip when the state actually changes (`actions[name].reset().fadeIn(0.4).play()`, fading out the previous action) — GSAP ScrollTrigger drives the progress value; the hook owns the state transitions.
 
-This gets the "bespoke 3D signature piece" effect from the reference without requiring character-modeling skills, multi-week production time, or the dependency weight (physics, postprocessing) the audit flagged as avoidable overhead.
+#### Section-by-section behavior mapping
+
+Adapted from the character brief's Hero/About/Skills/Projects/Contact arc onto our actual section list:
+
+| Section | Character state | Notes |
+|---|---|---|
+| Hero | `Idle`, subtle look toward viewer | Character centered/prominent, breathing loop |
+| About | `Turn` toward content + a subtler idle variant if available | Slight expression/pose change if blend shapes are in play |
+| Experience | `Point` (as if presenting career history) | Smaller/off to one side by now, per the position-scrub from the original plan |
+| Featured Projects | `Turn`/`Walk` toward the showcase, `Point` at the featured card in view | The two richest 2D cards get the character's most active gesture |
+| Project Grid | `LookAround` or continued `Point` | Lighter treatment, matching the cards' own lighter visual weight |
+| Skills | `LookAround` toward the marquee | Optional `Point` |
+| Certifications | Minimal — idle/look, character mostly out of the way | |
+| Contact | Faces the viewer, `Wave` | Closing bookend, matches the original plan's footer cameo |
+
+#### Camera & lighting
+
+- **Camera:** perspective camera, ~50–70mm-equivalent focal length, character centered or slightly offset, positioned roughly at chest/head height. Subtle depth of field only where performance allows (see performance budget in section 7 — cut this first on lower quality tiers). Character stays visually dominant on both desktop and mobile.
+- **Lighting (3-light setup, ties to the existing gradient palette):** a large soft key light for primary facial/front illumination; a lower-intensity fill light to soften shadows; a violet/purple rim light positioned behind or to the side for separation from the dark background — this rim light should use the same violet (`#7C3AED`) already defined as a palette token, not a separately-invented purple, so the character and the 2D UI read as one system. Any additional glow is a web-renderer post-processing effect, not baked into the asset.
+
+#### Background & environment
+
+Near-black background, a subtle violet ambient glow, an optional small floating light-orb accent (this echoes the recurring orb motif from the moncy.dev reference screenshots — legitimate to reuse as a generic UI motif, it's not part of his proprietary character), optional sparse particles carried over from the original abstract-shape plan, a soft shadow beneath the character's feet for grounding. The background must not compete with the 2D content sections.
+
+#### Interaction
+
+- **Mouse/touch:** head and/or eyes follow the cursor if the rig has the bones/blend shapes for it, otherwise parallax the whole character group; slight body rotation; movement stays limited and natural — no extreme rotations. Touch interaction replaces mouse interaction on touch devices rather than being simply disabled.
+- **Motion-sickness caution:** keep camera moves and character rotations subtle and slow — this is an accessibility/comfort requirement, not just a taste preference (ties to section 8).
+
+#### Component architecture
+
+Introduce a dedicated animation-state hook rather than folding scroll→state logic directly into the scene component:
+
+```
+components/three/
+  Centerpiece.tsx        (fallback/capability wrapper — unchanged in role)
+  CenterpieceScene.tsx    (Canvas + character render — now loads the glTF character)
+  CharacterController.tsx (drives position/scale/camera from scroll, owns which state is active)
+hooks/
+  useCharacterAnimation.ts (scroll-progress → discrete state → clip crossfade logic)
+```
+
+- **Cleanup implication (ties to section 11):** loaded glTF scenes, skinned meshes, animation mixers, and textures all need explicit disposal on unmount.
+- **Fallback, component boundary, and "required not optional" status:** unchanged from the prior plan — poster-image fallback for genuinely incompatible cases only; the character is expected to render for the large majority of visitors; all semantic content stays in ordinary DOM/HTML regardless of canvas state.
+- **What must NOT happen, regardless of how it's built:** no hardcoding of any name, role text, or brand string belonging to moncy.dev or Moncy Yohannan anywhere in code, copy, `alt` text, `aria-label`s, CSS class names, or comments. No code or comment framed as recreating another named site "exactly." All visible name/role/tagline text must come from `lib/constants.ts`, never duplicated as a literal string elsewhere.
 
 ## 5. React Bits Components — Mapping by Section (2D layer only — separate from the 3D centerpiece)
+
 
 | Section | Component(s) | Notes |
 |---|---|---|
@@ -156,6 +214,7 @@ const dpr = Math.min(window.devicePixelRatio, 1.5);
 - **Canvas behavior:** mark the 3D canvas `aria-hidden="true"` (it's decorative, not informational) — no equivalent DOM content needed since it conveys no unique information.
 - **Alt text:** meaningful, specific alt text on any real images (the poster/fallback image, project screenshots if added) — not generic labels like "image of project."
 - **Color and contrast:** test text/background contrast across animated states, hover states, glow overlays, and both themes — never rely on color, cursor change, or animation alone to communicate state.
+- **Motion-sickness caution for the character:** keep the character's scroll-driven rotations, walk/turn transitions, and any camera movement subtle and slow — this is a comfort/accessibility requirement on top of `prefers-reduced-motion`, not just a taste preference.
 
 ## 9. SEO Requirements
 
@@ -196,14 +255,14 @@ These matter specifically because the 3D + scroll-linked layer creates real reso
 
 - Scope every GSAP timeline through `useGSAP()` or `gsap.context()`, and revert it on unmount.
 - Kill `ScrollTrigger` instances, event listeners, RAF loops, and any subscriptions on component teardown.
-- Dispose Three.js geometries, materials, render targets, and textures when the Centerpiece scene unmounts.
+- Dispose Three.js geometries, materials, render targets, textures, **and any loaded glTF scenes/skinned meshes/animation mixers** when the Centerpiece scene unmounts.
 - Keep animation state out of React's high-frequency render loop — use refs, GSAP, or React Three Fiber's own state, not `setState` on every frame.
 - ESLint + TypeScript build checking (`tsc -b && vite build`/`next build`) as a baseline CI gate.
+- **A mandatory grep/lint check, run as part of the build or CI, that fails if any of the following appear anywhere in `app/`, `components/`, `lib/`, or `public/` (case-insensitive): `moncy`, `yohannan`, or any other real person's name/brand that isn't Ashriwad's. This is a hard gate, not a one-time cleanup** — a prior version of this codebase shipped hardcoded "MONCY YOHANNAN" text and CSS explicitly commented as an "exact recreation," which is both a licensing violation and simply wrong content for a resume site. Every visible name/role/tagline string must be sourced from `lib/constants.ts`, never duplicated as a literal.
 - A small automated test covering: anchor navigation, external links, keyboard navigation, and the no-WebGL fallback path (Playwright or equivalent).
 
 ## 12. Out of Scope (for v1)
 
-- A fully custom-modeled/rigged 3D character (moncy.dev's exact approach) — the abstract centerpiece in 4a is the v1 target; a character-level asset is a possible v2 stretch goal.
 - Physics engines and postprocessing effects (bloom/DOF/SSAO) unless a specific need arises.
 - Per-project case-study URLs/pages, structured `CreativeWork` data, and a full Lighthouse CI pipeline — good v2 additions per the audit, not required for v1 launch.
 - CMS/backend for content — content is hardcoded (in typed data files) from the resume.
@@ -212,4 +271,4 @@ These matter specifically because the 3D + scroll-linked layer creates real reso
 
 ## 13. Licensing Note
 
-Do not copy moncy.dev's distinctive layout, visuals, 3D avatar asset, or GSAP trial-plugin setup — his repository explicitly restricts this. This document uses his site only as an architectural/technical reference point; the actual design, content, and 3D concept here are original to this project.
+Do not copy moncy.dev's distinctive layout, visuals, 3D avatar asset, or GSAP trial-plugin setup — his repository explicitly restricts this. This document uses his site only as an architectural/technical reference point; the actual design, content, and 3D concept here are original to this project. This applies with equal force now that the centerpiece is a posed 3D character (section 4a) — the character must be a properly licensed/free-to-use asset (e.g. Mixamo) with its own poses and material styling, never Moncy's actual avatar or a visual copy of it, and no code, comment, class name, or asset filename may frame the work as recreating his site. A previous build of this codebase violated this directly — hardcoded "Moncy Yohannan" as the displayed name and labeled its own CSS an "exact recreation" of moncy.dev — that class of mistake is exactly what section 11's mandatory branding check now guards against.

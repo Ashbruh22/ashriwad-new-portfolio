@@ -53,3 +53,5 @@ next-env.d.ts
 # local AI-assistant tooling config — not part of the site itself
 .claude/
 .mcp.json
+
+.vercel
