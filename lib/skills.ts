@@ -18,7 +18,7 @@ export const skillGroups: SkillGroup[] = [
   {
     id:     'frameworks',
     label:  'Frameworks',
-    skills: ['React', 'React Native', 'Spring Boot', 'FastAPI'],
+    skills: ['React', 'React Native', 'Vite', 'Spring Boot', 'FastAPI'],
   },
   {
     id:     'ai-ml',
@@ -36,6 +36,10 @@ export const skillGroups: SkillGroup[] = [
       'Sentiment Analysis',
       'Image Processing',
       'F1 Score Evaluation',
+      'XGBoost',
+      'LSTM',
+      'SHAP (Explainable AI)',
+      'ONNX Runtime',
     ],
   },
   {
@@ -50,6 +54,12 @@ export const skillGroups: SkillGroup[] = [
       'Apache Airflow',
       'Spring Batch',
       'pg_cron',
+      'Redis',
+      'Upstash',
+      'Redis Streams',
+      'Apache Kafka',
+      'Server-Sent Events',
+      'Alembic',
     ],
   },
   {
@@ -62,6 +72,9 @@ export const skillGroups: SkillGroup[] = [
       'SonarQube',
       'Red Hat OpenShift',
       'Podman',
+      'Docker Compose',
+      'Vercel',
+      'Render',
     ],
   },
   {

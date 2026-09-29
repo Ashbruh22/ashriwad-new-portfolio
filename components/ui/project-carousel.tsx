@@ -187,6 +187,19 @@ export function ProjectCarousel({ projects, autoplayDelay = 4500 }: ProjectCarou
             </div>
           );
 
+          const liveSiteLink = project.links.demo && (
+            <a
+              href={project.links.demo}
+              target="_blank"
+              rel="noopener noreferrer"
+              onKeyDown={(e) => e.stopPropagation()}
+              className="mt-6 inline-flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] transition-colors hover:border-[var(--accent-2)] hover:text-[var(--accent-2)]"
+            >
+              Visit hosted site
+              <span aria-hidden="true">&rarr;</span>
+            </a>
+          );
+
           const image = project.image && (
             <div className="relative mt-6 aspect-[16/9] w-full overflow-hidden rounded-2xl border border-[var(--border-subtle)]">
               <Image
@@ -229,12 +242,14 @@ export function ProjectCarousel({ projects, autoplayDelay = 4500 }: ProjectCarou
                     <div className="mt-6">
                       {header}
                       {tools}
+                      {liveSiteLink}
                     </div>
                   </>
                 ) : (
                   <>
                     {header}
                     {tools}
+                    {liveSiteLink}
                     {image}
                   </>
                 )}

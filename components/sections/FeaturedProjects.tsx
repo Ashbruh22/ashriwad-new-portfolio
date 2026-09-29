@@ -19,7 +19,7 @@ export default function FeaturedProjects() {
         className="mb-14"
         description="Production-grade machine learning pipelines, peer-reviewed architectures, and offline-capable edge systems."
       >
-        Two systems, built end to end
+        Three systems, built end to end
       </SectionHeader>
 
       <AnimatedContent distance={32}>
