@@ -48,15 +48,11 @@ export const NAV_LINKS = [
 
 // ─── Asset paths ──────────────────────────────────────────────────────────
 
-// The file at this path is the real résumé (phone number redacted) — the
-// name is a holdover from when it was a 0-byte stub, kept as-is so the
-// path doesn't need touching again.
-export const RESUME_PATH = '/resume-placeholder.pdf';
+// The résumé PDF served from /public.
+export const RESUME_PATH = '/Ashriwad_Behera.pdf';
 
 // `download` attribute value on every résumé link (Hero, Nav, Contact) —
-// without this the browser saves the file under RESUME_PATH's own
-// basename ("resume-placeholder.pdf"), which is what the file is *named
-// on disk*, not what a visitor should see in their downloads folder.
+// without this the browser saves the file under RESUME_PATH's own basename.
 export const RESUME_DOWNLOAD_NAME = 'Ashriwad_Resume.pdf';
 
 export const OG_IMAGE_PATH   = '/og-image.png';
